@@ -1,0 +1,92 @@
+---
+title: "Practical Machine Leaning: Final Project"
+author: "Sean Nixon"
+date: "6/6/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data
+
+
+
+* The original article can be found at http://ritv.les.inf.puc-rio.br/public/papers/2012.Ugulino.WearableComputing.HAR.Classifier.RIBBON.pdf
+
+* The final dataset with all the derived features is freely available at http://groupware.les.inf.puc-rio.br/har
+
+```{r cars, warning=F, message=FALSE}
+library(readr); library(caret); library(randomForest)
+TrainingData    <- read_csv("./Data/pml-training.csv", na = c("NA","","#DIV/0!"))
+QuizData        <- read_csv("./Data/pml-testing.csv")
+```
+
+## Removing Troublesome or Unhelpful Data
+
+Before preforming any analysis, we first remove some unwanted data. There are 100 variables for which the vast majority (over 95%) of the data is missing and the first seven variables contain extraineous information like time stamp, subject name, and indexing of the entries. These first 7 variables are especially dangerous, since the Class variable we cant to predict occured in chronological order. Even though the time would technically give a good prediction for the Class variable, the goal is to build a model based on the accelerometer data. 
+
+```{r pressure, echo=T}
+BadCol          <- apply(TrainingData, 2, function(x) sum(is.na(x))>nrow(TrainingData)*0.95)
+BadCol[1:7]     <- 1 
+
+TrainingData    <- TrainingData[,!BadCol]
+QuizData        <- QuizData[,!BadCol]
+```
+
+There's also a small number of rows (technically, just a single row) which still contain missing values. Rather then account for this at the model/prediction stage, I've opted to just remove the offending entry. 
+
+```{r Bop}
+BadRow          <- apply(TrainingData, 1, function(x) sum(is.na(x))>0)
+TrainingData    <- TrainingData[!BadRow, ]
+```
+
+Finally, to pair down the number of variables and speed up computation times, I've checked for variables which are highly corralated (>0.95). This produces 3 variables from the belt accelerometer that can be dropped.   
+
+```{r Correlation}
+CorMat <- cor(TrainingData[,-53])
+CorrVar <- findCorrelation(CorMat, cutoff = .95)
+names(TrainingData)[CorrVar]
+TrainingData <- TrainingData[,-CorrVar]
+QuizData <- QuizData[,-CorrVar]
+
+```
+
+## Model
+
+Now that the data has been cleaned up, we can get down to the buisness of constructing a model. I've created a 70/30 splitt to for the training and testing data sets. 
+
+```{r Training}
+inTrain <- createDataPartition(TrainingData$classe, p=0.7, list = F)
+DataSet70 <- TrainingData[inTrain,]
+DataSet30 <- TrainingData[-inTrain,]
+```
+
+The first model I built used the Random Forest method. 
+
+```{r Orignal, eval = F}
+Model <- train(data = DataSet70, classe~. , method = "rf",
+                trControl = trainControl(method='cv', number = 5),
+                ntree=100)
+save(Model, file='./Data/ProjectModel.RData')
+```
+
+```{r Modeling, echo = F}
+load(file='./Data/ProjectModel.RData')
+Model
+```
+
+Since this gave such I high accuracy on the training set, I moved on to checking the model against the testing set which produced a similarly high accuracy. 
+
+```{r Checking}
+confusionMatrix(predict(newdata = DataSet30, Model), DataSet30$classe)
+```
+
+With a good working model in hand, the only thing left to do was work out the answers for the Quiz questions.
+
+```{r Quiz Data}
+predict(newdata = QuizData, Model)
+```
+
+
