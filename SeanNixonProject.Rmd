@@ -5,12 +5,7 @@ date: "6/6/2017"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ## Data
-
 
 
 * The original article can be found at http://ritv.les.inf.puc-rio.br/public/papers/2012.Ugulino.WearableComputing.HAR.Classifier.RIBBON.pdf
@@ -18,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 * The final dataset with all the derived features is freely available at http://groupware.les.inf.puc-rio.br/har
 
 ```{r cars, warning=F, message=FALSE}
-library(readr); library(caret); library(randomForest)
+library(readr); library(caret); library(randomForest); set.seed(2244)
 TrainingData    <- read_csv("./Data/pml-training.csv", na = c("NA","","#DIV/0!"))
 QuizData        <- read_csv("./Data/pml-testing.csv")
 ```
